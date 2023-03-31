@@ -17,7 +17,6 @@ public class Ventana extends JFrame{
         String password = "damocles";
         String inputPassword = JOptionPane.showInputDialog(null, "Input password:");
 
-
         if (inputPassword.equals(password)) {
 
             JFrame frame = new JFrame("Swing - Example 2");
@@ -35,7 +34,7 @@ public class Ventana extends JFrame{
             comboBox.setPreferredSize(new Dimension(200,50));
             box.add(comboBox);
             general.add(box);
-            general.setSize(150,150);
+            general.setSize(200,150);
             frame.add(general, BorderLayout.WEST);
 
             box.add(Box.createVerticalStrut(20));
@@ -85,10 +84,13 @@ public class Ventana extends JFrame{
                     String name = (String) comboBox.getSelectedItem();
                     if(check.isSelected()){
                         try {
+
                             BufferedWriter bw=new BufferedWriter(fw);
                             bw.write(name + ": " + " "+text.getText());
                             bw.newLine();
                             bw.flush();
+                            JOptionPane.showMessageDialog(frame, "Saved comment");
+
                         } catch (IOException ex) {
                             throw new RuntimeException(ex);
                         }
