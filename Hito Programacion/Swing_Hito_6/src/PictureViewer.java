@@ -75,8 +75,11 @@ public class PictureViewer extends JFrame {
                     String selected = combo.getSelectedItem().toString();
                     String fecha;
                     System.out.println(selected);
-                    PreparedStatement p = con.prepareStatement("SELECT title FROM pictures WHERE photographerid in (SELECT photographerid FROM photographers WHERE picname = '"+selected+"');");
-                    ResultSet rs = p.executeQuery();
+
+
+                    PreparedStatement p;
+                    ResultSet rs;
+
                     listModel.removeAllElements();
 
                     if (date.getDate() == null){
@@ -115,6 +118,9 @@ public class PictureViewer extends JFrame {
                             System.out.println(rs.getString("picfile"));
                         }
 
+                        // increment visits
+                        incrementVista(file);
+
                         ImageIcon imageIcon = new ImageIcon(file);
                         Image image = imageIcon.getImage();
                         Image scaledImage = image.getScaledInstance(200, 200, Image.SCALE_SMOOTH);
@@ -130,5 +136,39 @@ public class PictureViewer extends JFrame {
 
 
         frame.setVisible(true);
+
+    }
+
+    public void incrementVista(String file) throws SQLException {
+        // coger el file
+        final String PASSWORD = "leajim01";
+        String pic;
+        String username = "root";
+        String password = PASSWORD;
+        String url = "jdbc:mysql://127.0.0.1:3306/picture";
+        Connection con = DriverManager.getConnection(url, username, password);
+        Statement stmt;
+        ResultSet rs;
+
+        System.out.println("File : " + file);
+
+        PreparedStatement p = con.prepareStatement("SELECT visits FROM pictures WHERE picfile = '" + file + "'");
+        ResultSet response = p.executeQuery();
+
+        int views = 0;
+
+        while(response.next()){
+            views = response.getInt("visits");
+        }
+
+        views++;
+
+        System.out.println("Updating : " + file);
+        ResultSet rs2;
+
+        PreparedStatement p2 = con.prepareStatement("UPDATE pictures SET visits = '" + views + "'  WHERE picfile = '" + file + "'");
+        p2.executeUpdate();
+
+        con.close();
     }
 }
