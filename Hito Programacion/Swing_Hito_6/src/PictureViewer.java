@@ -1,67 +1,58 @@
 import org.jdesktop.swingx.JXDatePicker;
-
-import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
 public class PictureViewer extends JFrame {
-    public  PictureViewer() throws SQLException {
+    public PictureViewer() throws SQLException {
         JFrame frame = new JFrame("Photography");
-        frame.setLayout(new GridLayout(2,2));
-        frame.setSize(450, 400);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.setSize(400,400);
+        frame.setLayout(new GridLayout(2,2));
         frame.setLocationRelativeTo(null);
 
-        final String PASSWORD = "leajim01";
-        String pic;
-        String username = "root";
-        String password = PASSWORD;
-        String url = "jdbc:mysql://127.0.0.1:3306/picture";
-        Connection con = DriverManager.getConnection(url, username, password);
-        Statement stmt;
-        ResultSet rs;
-        stmt = con.createStatement();
 
-        rs = stmt.executeQuery("SELECT picname FROM photographers ");
-        ArrayList<String> options = new ArrayList<String>();
-        while(rs.next()){// columna title
-            options.add(rs.getString("picname"));
-        }
+        Conexion conexion = new Conexion();
+        Statement stm;
+        ResultSet rs;
 
         JPanel box = new JPanel();
-        JLabel textbox = new JLabel("Photographer:");
-        JComboBox combo = new JComboBox(options.toArray());
-        combo.setMaximumSize(new Dimension(100, 20));
-        box.add(textbox);
+        ArrayList<String> options = new ArrayList<String>();
+        stm = conexion.getCon().createStatement();
+        rs = stm.executeQuery("Select picname from photographers");
+        while(rs.next()){
+            options.add(rs.getString("picname"));
+        }
+        System.out.println(options); // comprobamos de que Arraylist loaded
+        JLabel text = new JLabel("Photographer:");
+        JComboBox combo = new JComboBox<>(options.toArray());
+        combo.setMaximumSize(new Dimension(100,20));
+        box.add(text);
         box.add(combo);
         frame.add(box);
 
         JPanel calendar = new JPanel();
-        JLabel textdate = new JLabel("Photos after");
+        JLabel textdate = new JLabel("Photos After:");
         JXDatePicker date = new JXDatePicker();
         calendar.add(textdate);
         calendar.add(date);
         frame.add(calendar);
 
-        JPanel lst = new JPanel();
+        JPanel lista = new JPanel();
         JList list = new JList();
-        DefaultListModel<String> listModel = new DefaultListModel<>(); // create a new DefaultListModel
+        DefaultListModel<String> listModel = new DefaultListModel<>();
         list.setModel(listModel);
         list.setPreferredSize(new Dimension(200,200));
-        lst.add(list);
-        frame.add(lst);
+        lista.add(list);
+        frame.add(lista);
 
         JPanel image = new JPanel();
         JLabel img = new JLabel();
@@ -71,32 +62,26 @@ public class PictureViewer extends JFrame {
         combo.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                try {
-                    String selected = combo.getSelectedItem().toString();
+                try{
+                    String selected = (String) combo.getSelectedItem();
                     String fecha;
-                    System.out.println(selected);
-
-
-                    PreparedStatement p;
+                    System.out.println(selected); // para comprobar si ha sido seleccionado
+                    Statement stm;
                     ResultSet rs;
-
                     listModel.removeAllElements();
+                    stm = conexion.getCon().createStatement();
 
                     if (date.getDate() == null){
-                         p = con.prepareStatement("SELECT title FROM pictures WHERE photographerid in (SELECT photographerid FROM photographers WHERE picname = '"+selected+"');");
-                         rs = p.executeQuery();
+                        rs = stm.executeQuery("Select title from pictures where photographerid in (Select photographerid from photographers where picname = '"+selected+"')");
                     }else{
                         fecha = new SimpleDateFormat("yyyy-MM-dd").format(date.getDate());
-                        p = con.prepareStatement("SELECT title FROM pictures WHERE picturedate >= '"+fecha+"' and photographerid in (SELECT photographerid FROM photographers WHERE picname = '"+selected+"');");
-                        rs = p.executeQuery();
+                        rs = stm.executeQuery("SELECT title FROM pictures WHERE picturedate >= '" + fecha + "' and photographerid in (SELECT photographerid FROM photographers WHERE picname = '" + selected + "');");
                     }
-                    while(rs.next()){
-                        String pic = rs.getString("title");
-                        listModel.addElement(pic);
-                        System.out.println(rs.getString("title"));
+                    while (rs.next()){
+                        listModel.addElement(rs.getString("title"));
+                        System.out.println(rs.getString("title")); // para comprobar si printea las imagenes del photographer
                     }
-
-                } catch (SQLException ex) {
+                } catch (Exception ex) {
                     throw new RuntimeException(ex);
                 }
             }
@@ -105,27 +90,25 @@ public class PictureViewer extends JFrame {
         list.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    String file = "";
-                    String titulo = (String) list.getSelectedValue();
-
-                    try {
-                        PreparedStatement p = con.prepareStatement("select picfile from pictures where title = '" + titulo + "'");
-                        ResultSet rs = p.executeQuery();
-
+                if(e.getClickCount() == 2){
+                    try{
+                        String file = "";
+                        String titulo = list.getSelectedValue().toString();
+                        Statement stm;
+                        ResultSet rs;
+                        stm = conexion.getCon().createStatement();
+                        rs = stm.executeQuery("select picfile from pictures where title = '" + titulo + "'");
                         while (rs.next()) {
                             file = rs.getString("picfile");
-                            System.out.println(rs.getString("picfile"));
+                            System.out.println(rs.getString("picfile")); //comprobar si la imagen se ha seleccionado
                         }
-
-                        // increment visits
-                        incrementVista(file);
 
                         ImageIcon imageIcon = new ImageIcon(file);
                         Image image = imageIcon.getImage();
                         Image scaledImage = image.getScaledInstance(200, 200, Image.SCALE_SMOOTH);
                         ImageIcon scaledIcon = new ImageIcon(scaledImage);
-                        img.setIcon(scaledIcon);
+
+                        incrementVista(file);// metodo que incrementa el numero de vistas de la imagen cada vez que hacemos click
 
                     } catch (SQLException ex) {
                         throw new RuntimeException(ex);
@@ -134,41 +117,14 @@ public class PictureViewer extends JFrame {
             }
         });
 
-
         frame.setVisible(true);
-
     }
-
     public void incrementVista(String file) throws SQLException {
-        // coger el file
-        final String PASSWORD = "leajim01";
-        String pic;
-        String username = "root";
-        String password = PASSWORD;
-        String url = "jdbc:mysql://127.0.0.1:3306/picture";
-        Connection con = DriverManager.getConnection(url, username, password);
-        Statement stmt;
-        ResultSet rs;
-
-        System.out.println("File : " + file);
-
-        PreparedStatement p = con.prepareStatement("SELECT visits FROM pictures WHERE picfile = '" + file + "'");
-        ResultSet response = p.executeQuery();
-
-        int views = 0;
-
-        while(response.next()){
-            views = response.getInt("visits");
-        }
-
-        views++;
-
-        System.out.println("Updating : " + file);
-        ResultSet rs2;
-
-        PreparedStatement p2 = con.prepareStatement("UPDATE pictures SET visits = '" + views + "'  WHERE picfile = '" + file + "'");
-        p2.executeUpdate();
-
-        con.close();
+        Conexion c = new Conexion();
+        System.out.println("Updating: " + file);
+        Statement stm;
+        stm = c.getCon().createStatement();
+        int rs = stm.executeUpdate("Update pictures SET visits = visits + 1 where picfile = '" + file + "'");
     }
+
 }
